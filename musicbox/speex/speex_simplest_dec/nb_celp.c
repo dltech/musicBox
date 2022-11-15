@@ -29,28 +29,17 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <math.h>
-#include "nb_celp.h"
-#include "lpc.h"
 #include "lsp.h"
-#include "ltp.h"
-#include "quant_lsp.h"
-#include "cb_search.h"
 #include "filters.h"
+#include "modes.h"
+
+#include "speex_bits.h"
 #include "stack_alloc.h"
-#include "vq.h"
-#include "vbr.h"
 #include "arch.h"
 #include "math_approx.h"
-#include "os_support.h"
+#include "config.h"
 
-#ifdef VORBIS_PSYCHO
-#include "vorbis_psy.h"
-#endif
+#include "nb_celp.h"
 
 #ifndef NULL
 #define NULL 0
@@ -60,16 +49,11 @@
 
 /* Default size for the encoder and decoder stack (can be changed at compile time).
    This does not apply when using variable-size arrays or alloca. */
-#ifndef NB_ENC_STACK
-#define NB_ENC_STACK (8000*sizeof(spx_sig_t))
-#endif
-
 #ifndef NB_DEC_STACK
 #define NB_DEC_STACK (4000*sizeof(spx_sig_t))
 #endif
 
 
-#ifdef FIXED_POINT
 static const spx_word32_t ol_gain_table[32]={18900, 25150, 33468, 44536, 59265, 78865, 104946, 139653, 185838, 247297, 329081, 437913, 582736, 775454, 1031906, 1373169, 1827293, 2431601, 3235761, 4305867, 5729870, 7624808, 10146425, 13501971, 17967238, 23909222, 31816294, 42338330, 56340132, 74972501, 99766822, 132760927};
 static const spx_word16_t exc_gain_quant_scal3_bound[7]={1841, 3883, 6051, 8062, 10444, 13580, 18560};
 static const spx_word16_t exc_gain_quant_scal3[8]={1002, 2680, 5086, 7016, 9108, 11781, 15380, 21740};
@@ -80,46 +64,25 @@ static const spx_word16_t exc_gain_quant_scal1[2]={11546, 17224};
 #define LSP_DELTA1 6553
 #define LSP_DELTA2 1638
 
-#else
 
-static const float exc_gain_quant_scal3_bound[7]={0.112338f, 0.236980f, 0.369316f, 0.492054f, 0.637471f, 0.828874f, 1.132784f};
-static const float exc_gain_quant_scal3[8]={0.061130f, 0.163546f, 0.310413f, 0.428220f, 0.555887f, 0.719055f, 0.938694f, 1.326874f};
-static const float exc_gain_quant_scal1_bound[1]={0.87798f};
-static const float exc_gain_quant_scal1[2]={0.70469f, 1.05127f};
-
-#define LSP_MARGIN .002f
-#define LSP_DELTA1 .2f
-#define LSP_DELTA2 .05f
-
-#endif
-
-#ifdef VORBIS_PSYCHO
-#define EXTRA_BUFFER 100
-#else
-#define EXTRA_BUFFER 0
-#endif
 
 
 extern const spx_word16_t lag_window[];
 extern const spx_word16_t lpc_window[];
 
+DecState state;
+DecState *st;
+spx_sig_t stack_tipo_alloc[NB_DEC_STACK] = 0;
+st.stack = stack_tipo_alloc;
 
-#ifndef DISABLE_DECODER
 void *nb_decoder_init(const SpeexMode *m)
 {
-   DecState *st;
    const SpeexNBMode *mode;
    int i;
 
    mode=(const SpeexNBMode*)m->mode;
-   st = (DecState *)speex_alloc(sizeof(DecState));
-   if (!st)
-      return NULL;
-
-   st->stack = (char*)speex_alloc_scratch(NB_DEC_STACK);
 
    st->mode=m;
-
 
    st->encode_submode = 1;
 
@@ -127,7 +90,8 @@ void *nb_decoder_init(const SpeexMode *m)
    /* Codec parameters, should eventually have several "modes"*/
 
    st->submodes=mode->submodes;
-   st->submodeID=mode->defaultSubmode;
+	
+   st->submodeID=mode->3;
 
    st->lpc_enh_enabled=1;
 
@@ -151,160 +115,18 @@ void *nb_decoder_init(const SpeexMode *m)
    st->voc_offset=0;
    st->dtx_enabled=0;
    st->isWideband = 0;
-   st->highpass_enabled = 1;
+	
+//   st->highpass_enabled = 1;
+   st->highpass_enabled = 0;
+	
+   st->lpc_enh_enabled = NULL;
 
-#ifdef ENABLE_VALGRIND
-   VALGRIND_MAKE_READABLE(st, NB_DEC_STACK);
-#endif
    return st;
 }
 
-void nb_decoder_destroy(void *state)
-{
-#if !(defined(VAR_ARRAYS) || defined (USE_ALLOCA))
-   DecState *st;
-   st=(DecState*)state;
-
-   speex_free_scratch(st->stack);
-#endif
-
-   speex_free(state);
-}
-
-int nb_decoder_ctl(void *state, int request, void *ptr)
-{
-   DecState *st;
-   st=(DecState*)state;
-   switch(request)
-   {
-   case SPEEX_SET_LOW_MODE:
-   case SPEEX_SET_MODE:
-      st->submodeID = (*(spx_int32_t*)ptr);
-      break;
-   case SPEEX_GET_LOW_MODE:
-   case SPEEX_GET_MODE:
-      (*(spx_int32_t*)ptr) = st->submodeID;
-      break;
-   case SPEEX_SET_ENH:
-      st->lpc_enh_enabled = *((spx_int32_t*)ptr);
-      break;
-   case SPEEX_GET_ENH:
-      *((spx_int32_t*)ptr) = st->lpc_enh_enabled;
-      break;
-   case SPEEX_GET_FRAME_SIZE:
-      (*(spx_int32_t*)ptr) = NB_FRAME_SIZE;
-      break;
-   case SPEEX_GET_BITRATE:
-      if (st->submodes[st->submodeID])
-         (*(spx_int32_t*)ptr) = st->sampling_rate*SUBMODE(bits_per_frame)/NB_FRAME_SIZE;
-      else
-         (*(spx_int32_t*)ptr) = st->sampling_rate*(NB_SUBMODE_BITS+1)/NB_FRAME_SIZE;
-      break;
-   case SPEEX_SET_SAMPLING_RATE:
-      st->sampling_rate = (*(spx_int32_t*)ptr);
-      break;
-   case SPEEX_GET_SAMPLING_RATE:
-      (*(spx_int32_t*)ptr)=st->sampling_rate;
-      break;
-   case SPEEX_SET_HANDLER:
-      {
-         SpeexCallback *c = (SpeexCallback*)ptr;
-         st->speex_callbacks[c->callback_id].func=c->func;
-         st->speex_callbacks[c->callback_id].data=c->data;
-         st->speex_callbacks[c->callback_id].callback_id=c->callback_id;
-      }
-      break;
-   case SPEEX_SET_USER_HANDLER:
-      {
-         SpeexCallback *c = (SpeexCallback*)ptr;
-         st->user_callback.func=c->func;
-         st->user_callback.data=c->data;
-         st->user_callback.callback_id=c->callback_id;
-      }
-      break;
-   case SPEEX_RESET_STATE:
-      {
-         int i;
-         for (i=0;i<NB_ORDER;i++)
-            st->mem_sp[i]=0;
-         for (i=0;i<NB_FRAME_SIZE + NB_PITCH_END + 1;i++)
-            st->excBuf[i]=0;
-      }
-      break;
-   case SPEEX_SET_SUBMODE_ENCODING:
-      st->encode_submode = (*(spx_int32_t*)ptr);
-      break;
-   case SPEEX_GET_SUBMODE_ENCODING:
-      (*(spx_int32_t*)ptr) = st->encode_submode;
-      break;
-   case SPEEX_GET_LOOKAHEAD:
-      (*(spx_int32_t*)ptr)=NB_SUBFRAME_SIZE;
-      break;
-   case SPEEX_SET_HIGHPASS:
-      st->highpass_enabled = (*(spx_int32_t*)ptr);
-      break;
-   case SPEEX_GET_HIGHPASS:
-      (*(spx_int32_t*)ptr) = st->highpass_enabled;
-      break;
-      /* FIXME: Convert to fixed-point and re-enable even when float API is disabled */
-#ifndef DISABLE_FLOAT_API
-   case SPEEX_GET_ACTIVITY:
-   {
-      float ret;
-      ret = log(st->level/st->min_level)/log(st->max_level/st->min_level);
-      if (ret>1)
-         ret = 1;
-      /* Done in a strange way to catch NaNs as well */
-      if (!(ret > 0))
-         ret = 0;
-      /*printf ("%f %f %f %f\n", st->level, st->min_level, st->max_level, ret);*/
-      (*(spx_int32_t*)ptr) = (int)(100*ret);
-   }
-   break;
-#endif
-   case SPEEX_GET_PI_GAIN:
-      {
-         int i;
-         spx_word32_t *g = (spx_word32_t*)ptr;
-         for (i=0;i<NB_NB_SUBFRAMES;i++)
-            g[i]=st->pi_gain[i];
-      }
-      break;
-   case SPEEX_GET_EXC:
-      {
-         int i;
-         for (i=0;i<NB_NB_SUBFRAMES;i++)
-            ((spx_word16_t*)ptr)[i] = compute_rms16(st->exc+i*NB_SUBFRAME_SIZE, NB_SUBFRAME_SIZE);
-      }
-      break;
-   case SPEEX_GET_DTX_STATUS:
-      *((spx_int32_t*)ptr) = st->dtx_enabled;
-      break;
-   case SPEEX_SET_INNOVATION_SAVE:
-      st->innov_save = (spx_word16_t*)ptr;
-      break;
-   case SPEEX_SET_WIDEBAND:
-      st->isWideband = *((spx_int32_t*)ptr);
-      break;
-   case SPEEX_GET_STACK:
-      *((char**)ptr) = st->stack;
-      break;
-   default:
-      speex_warning_int("Unknown nb_ctl request: ", request);
-      return -1;
-   }
-   return 0;
-}
-
-
 #define median3(a, b, c)	((a) < (b) ? ((b) < (c) ? (b) : ((a) < (c) ? (c) : (a))) : ((c) < (b) ? (b) : ((c) < (a) ? (c) : (a))))
 
-#ifdef FIXED_POINT
 const spx_word16_t attenuation[10] = {32767, 31483, 27923, 22861, 17278, 12055, 7764, 4616, 2533, 1283};
-#else
-const spx_word16_t attenuation[10] = {1., 0.961, 0.852, 0.698, 0.527, 0.368, 0.237, 0.141, 0.077, 0.039};
-
-#endif
 
 
 /* Just so we don't need to carry the complete wideband mode information */
@@ -347,7 +169,6 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
       /* If bits is NULL, consider the packet to be lost (what could we do anyway) */
       if (!bits)
       {
-         nb_decode_lost(st, out, stack);
          return 0;
       }
 
@@ -368,7 +189,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
             advance = wb_skip_table[submode];
             if (advance < 0)
             {
-               speex_notify("Invalid mode encountered. The stream is corrupted.");
+               //speex_notify("Invalid mode encountered. The stream is corrupted.");
                return -2;
             }
             advance -= (SB_SUBMODE_BITS+1);
@@ -384,7 +205,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
                advance = wb_skip_table[submode];
                if (advance < 0)
                {
-                  speex_notify("Invalid mode encountered. The stream is corrupted.");
+                  //speex_notify("Invalid mode encountered. The stream is corrupted.");
                   return -2;
                }
                advance -= (SB_SUBMODE_BITS+1);
@@ -392,7 +213,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
                wideband = speex_bits_unpack_unsigned(bits, 1);
                if (wideband)
                {
-                  speex_notify("More than two wideband layers found. The stream is corrupted.");
+                  //speex_notify("More than two wideband layers found. The stream is corrupted.");
                   return -2;
                }
 
@@ -417,7 +238,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
                return ret;
          } else if (m>8) /* Invalid mode */
          {
-            speex_notify("Invalid mode encountered. The stream is corrupted.");
+            //speex_notify("Invalid mode encountered. The stream is corrupted.");
             return -2;
          }
 
@@ -502,12 +323,9 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
    {
       int qe;
       qe = speex_bits_unpack_unsigned(bits, 5);
-#ifdef FIXED_POINT
       /* FIXME: Perhaps we could slightly lower the gain here when the output is going to saturate? */
       ol_gain = MULT16_32_Q15(28406,ol_gain_table[qe]);
-#else
-      ol_gain = SIG_SCALING*exp(qe/3.5);
-#endif
+
    }
 
    ALLOC(ak, NB_ORDER, spx_coef_t);
@@ -632,19 +450,6 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
             signal_mul(innov, innov, ener, NB_SUBFRAME_SIZE);
 
-            /* Decode second codebook (only for some modes) */
-            if (SUBMODE(double_codebook))
-            {
-               char *tmp_stack=stack;
-               VARDECL(spx_sig_t *innov2);
-               ALLOC(innov2, NB_SUBFRAME_SIZE, spx_sig_t);
-               SPEEX_MEMSET(innov2, 0, NB_SUBFRAME_SIZE);
-               SUBMODE(innovation_unquant)(innov2, SUBMODE(innovation_params), NB_SUBFRAME_SIZE, bits, stack, &st->seed);
-               signal_mul(innov2, innov2, MULT16_32_Q15(QCONST16(0.454545f,15),ener), NB_SUBFRAME_SIZE);
-               for (i=0;i<NB_SUBFRAME_SIZE;i++)
-                  innov[i] = ADD32(innov[i], innov2[i]);
-               stack = tmp_stack;
-            }
             for (i=0;i<NB_SUBFRAME_SIZE;i++)
                exc[i]=EXTRACT16(SATURATE32(PSHR32(ADD32(SHL32(exc32[i],1),innov[i]),SIG_SHIFT),32767));
             /*print_vec(exc, 40, "innov");*/
@@ -711,15 +516,11 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
       spx_word16_t gain;
       exc_ener = compute_rms16 (st->exc, NB_FRAME_SIZE);
       gain32 = PDIV32(ol_gain, ADD16(exc_ener,1));
-#ifdef FIXED_POINT
-      if (gain32 > 32767)
+
+	   if (gain32 > 32767)
          gain32 = 32767;
       gain = EXTRACT16(gain32);
-#else
-      if (gain32 > 2)
-         gain32=2;
-      gain = gain32;
-#endif
+
       for (i=0;i<NB_FRAME_SIZE;i++)
       {
          st->exc[i] = MULT16_16_Q14(gain, st->exc[i]);
@@ -763,8 +564,8 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
    }
 
-   if (st->highpass_enabled)
-      highpass(out, out, NB_FRAME_SIZE, (st->isWideband?HIGHPASS_WIDEBAND:HIGHPASS_NARROWBAND)|HIGHPASS_OUTPUT, st->mem_hp);
+//   if (st->highpass_enabled)
+//      highpass(out, out, NB_FRAME_SIZE, (st->isWideband?HIGHPASS_WIDEBAND:HIGHPASS_NARROWBAND)|HIGHPASS_OUTPUT, st->mem_hp);
    /*for (i=0;i<NB_FRAME_SIZE;i++)
      printf ("%d\n", (int)st->frame[i]);*/
 
@@ -784,11 +585,8 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
    st->first = 0;
    st->count_lost=0;
    st->last_pitch = best_pitch;
-#ifdef FIXED_POINT
    st->last_pitch_gain = PSHR16(pitch_average,2);
-#else
-   st->last_pitch_gain = .25*pitch_average;
-#endif
+
    st->pitch_gain_buf[st->pitch_gain_buf_idx++] = st->last_pitch_gain;
    if (st->pitch_gain_buf_idx > 2) /* rollover */
       st->pitch_gain_buf_idx = 0;
@@ -797,5 +595,4 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
    return 0;
 }
-#endif /* DISABLE_DECODER */
 

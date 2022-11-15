@@ -1,8 +1,7 @@
-/* Copyright (C) 2005 Analog Devices */
+/* Copyright (C) 2002 Jean-Marc Valin */
 /**
-   @file misc_bfin.h
-   @author Jean-Marc Valin 
-   @brief Various compatibility routines for Speex (Blackfin version)
+   @file vq.h
+   @brief Vector quantization
 */
 /*
    Redistribution and use in source and binary forms, with or without
@@ -33,24 +32,16 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "bfin.h"
+#ifndef VQ_H
+#define VQ_H
 
-#define OVERRIDE_SPEEX_MOVE
-void *speex_move (void *dest, void *src, int n)
-{
-   __asm__ __volatile__
-         (
-         "L0 = 0;\n\t"
-         "I0 = %0;\n\t"
-         "R0 = [I0++];\n\t"
-         "LOOP move%= LC0 = %2;\n\t"
-         "LOOP_BEGIN move%=;\n\t"
-            "[%1++] = R0 || R0 = [I0++];\n\t"
-         "LOOP_END move%=;\n\t"
-         "[%1++] = R0;\n\t"
-   : "=a" (src), "=a" (dest)
-   : "a" ((n>>2)-1), "0" (src), "1" (dest)
-   : "R0", "I0", "L0", "memory" BFIN_HWLOOP0_REGS
-         );
-   return dest;
-}
+#include "arch.h"
+
+int scal_quant(spx_word16_t in, const spx_word16_t *boundary, int entries);
+int scal_quant32(spx_word32_t in, const spx_word32_t *boundary, int entries);
+
+
+void vq_nbest(spx_word16_t *in, const spx_word16_t *codebook, int len, int entries, spx_word32_t *E, int N, int *nbest, spx_word32_t *best_dist, char *stack);
+
+void vq_nbest_sign(spx_word16_t *in, const spx_word16_t *codebook, int len, int entries, spx_word32_t *E, int N, int *nbest, spx_word32_t *best_dist, char *stack);
+

@@ -1,24 +1,24 @@
-/* Copyright (C) 2002 Jean-Marc Valin */
+/* Copyright (C) 2002-2006 Jean-Marc Valin*/
 /**
-   @file vq.h
-   @brief Vector quantization
+  @file speex.h
+  @brief Describes the different modes of the codec
 */
 /*
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -30,25 +30,27 @@
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 */
 
-#ifndef VQ_H
-#define VQ_H
 
-#include "arch.h"
+/** Returns a handle to a newly created decoder state structure. For now,
+ * the mode argument can be &nb_mode or &wb_mode . In the future, more modes
+ * may be added.  Note that for now if you have more than one channels to
+ * decode, you need one state per channel.
+ *
+ * @param mode Speex mode (one of speex_nb_mode or speex_wb_mode)
+ * @return A newly created decoder state or NULL if state allocation fails
+ */
+void *speex_decoder_init(const SpeexMode *mode);
 
-int scal_quant(spx_word16_t in, const spx_word16_t *boundary, int entries);
-int scal_quant32(spx_word32_t in, const spx_word32_t *boundary, int entries);
 
-#ifdef _USE_SSE
-#include <xmmintrin.h>
-void vq_nbest(spx_word16_t *in, const __m128 *codebook, int len, int entries, __m128 *E, int N, int *nbest, spx_word32_t *best_dist, char *stack);
-
-void vq_nbest_sign(spx_word16_t *in, const __m128 *codebook, int len, int entries, __m128 *E, int N, int *nbest, spx_word32_t *best_dist, char *stack);
-#else
-void vq_nbest(spx_word16_t *in, const spx_word16_t *codebook, int len, int entries, spx_word32_t *E, int N, int *nbest, spx_word32_t *best_dist, char *stack);
-
-void vq_nbest_sign(spx_word16_t *in, const spx_word16_t *codebook, int len, int entries, spx_word32_t *E, int N, int *nbest, spx_word32_t *best_dist, char *stack);
-#endif
-
-#endif
+/** Uses an existing decoder state to decode one frame of speech from
+ * bit-stream bits. The output speech is saved written to out.
+ *
+ * @param state Decoder state
+ * @param bits Bit-stream from which to decode the frame (NULL if the packet was lost)
+ * @param out Where to write the decoded frame
+ * @return return status (0 for no error, -1 for end of stream, -2 corrupt stream)
+ */
+int speex_decode(void *state, SpeexBits *bits, float *out);

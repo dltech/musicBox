@@ -1,7 +1,7 @@
 /* Copyright (C) 2002 Jean-Marc Valin */
 /**
-   @file quant_lsp.h
-   @brief LSP vector quantization
+   @file stack_alloc.h
+   @brief Temporary memory allocation on stack
 */
 /*
    Redistribution and use in source and binary forms, with or without
@@ -32,43 +32,52 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef QUANT_LSP_H
-#define QUANT_LSP_H
+#ifndef STACK_ALLOC_H
+#define STACK_ALLOC_H
 
-#include "speex/speex_bits.h"
-#include "arch.h"
 
-#define MAX_LSP_SIZE 20
+/**
+ * @def ALIGN(stack, size)
+ *
+ * Aligns the stack to a 'size' boundary
+ *
+ * @param stack Stack
+ * @param size  New size boundary
+ */
 
-#define NB_CDBK_SIZE 64
-#define NB_CDBK_SIZE_LOW1 64
-#define NB_CDBK_SIZE_LOW2 64
-#define NB_CDBK_SIZE_HIGH1 64
-#define NB_CDBK_SIZE_HIGH2 64
+/**
+ * @def PUSH(stack, size, type)
+ *
+ * Allocates 'size' elements of type 'type' on the stack
+ *
+ * @param stack Stack
+ * @param size  Number of elements
+ * @param type  Type of element
+ */
 
-/*Narrowband codebooks*/
-extern const signed char cdbk_nb[];
-extern const signed char cdbk_nb_low1[];
-extern const signed char cdbk_nb_low2[];
-extern const signed char cdbk_nb_high1[];
-extern const signed char cdbk_nb_high2[];
+/**
+ * @def VARDECL(var)
+ *
+ * Declare variable on stack
+ *
+ * @param var Variable to declare
+ */
 
-/* Quantizes narrowband LSPs with 30 bits */
-void lsp_quant_nb(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits);
+/**
+ * @def ALLOC(var, size, type)
+ *
+ * Allocate 'size' elements of 'type' on stack
+ *
+ * @param var  Name of variable to allocate
+ * @param size Number of elements
+ * @param type Type of element
+ */
 
-/* Decodes quantized narrowband LSPs */
-void lsp_unquant_nb(spx_lsp_t *lsp, int order, SpeexBits *bits);
+#define ALIGN(stack, size) ((stack) += ((size) - (long)(stack)) & ((size) - 1))
 
-/* Quantizes low bit-rate narrowband LSPs with 18 bits */
-void lsp_quant_lbr(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits);
+#define PUSH(stack, size, type) (ALIGN((stack),sizeof(type)),(stack)+=((size)*sizeof(type)),(type*)((stack)-((size)*sizeof(type))))
 
-/* Decodes quantized low bit-rate narrowband LSPs */
-void lsp_unquant_lbr(spx_lsp_t *lsp, int order, SpeexBits *bits);
+#define VARDECL(var) var
+#define ALLOC(var, size, type) var = PUSH(stack, size, type)
 
-/* Quantizes high-band LSPs with 12 bits */
-void lsp_quant_high(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits);
 
-/* Decodes high-band LSPs */
-void lsp_unquant_high(spx_lsp_t *lsp, int order, SpeexBits *bits);
-
-#endif

@@ -163,15 +163,6 @@ static const split_cb_params split_cb_nb_med = {
    0,
 };
 
-/* Split-VQ innovation for low-band wideband */
-static const split_cb_params split_cb_sb = {
-   5,               /*subvect_size*/
-   8,              /*nb_subvect*/
-   exc_5_256_table,    /*shape_cb*/
-   8,               /*shape_bits*/
-   0,
-};
-
 
 
 /* 2150 bps "vocoder-like" mode for comfort noise */
@@ -320,28 +311,6 @@ static const SpeexSubmode nb_submode6 = {
    QCONST16(.15,15),
    364
 };
-
-/* 24.6 kbps high bit-rate mode */
-static const SpeexSubmode nb_submode7 = {
-   -1,
-   0,
-   3,
-   1,
-   /*LSP quantization*/
-   lsp_quant_nb,
-   lsp_unquant_nb,
-   /*Pitch quantization*/
-   pitch_search_3tap,
-   pitch_unquant_3tap,
-   &ltp_params_nb,
-   /*Innovation quantization*/
-   split_cb_search_shape_sign,
-   split_cb_shape_sign_unquant,
-   &split_cb_nb,
-   QCONST16(.05,15),
-   492
-};
-
 
 /* Default mode for narrowband */
 static const SpeexNBMode nb_mode = {
