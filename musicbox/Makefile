@@ -3,7 +3,7 @@ TARGET = ../result/musicbox
 LIB_DIR = stm32
 REG_DIR	= $(LIB_DIR)/regs
 USB_DIR = usbcom
-SPEEX_DIR = speex_simplest_dec
+SPEEX_DIR = speex/speex_simplest_dec
 ODIR = bin
 BINDIR = bin
 
@@ -24,6 +24,7 @@ SOURCES += $(REG_DIR)/usb_device_regs.c
 SOURCES += $(SPEEX_DIR)/bits.c
 SOURCES += $(SPEEX_DIR)/filters.c
 SOURCES += $(SPEEX_DIR)/lsp.c
+SOURCES += $(SPEEX_DIR)/ltp.c
 SOURCES += $(SPEEX_DIR)/modes.c
 SOURCES += $(SPEEX_DIR)/nb_celp.c
 SOURCES += $(SPEEX_DIR)/vq.c

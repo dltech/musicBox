@@ -7,18 +7,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -36,8 +36,8 @@
 #ifndef MODES_H
 #define MODES_H
 
-#include "speex/speex.h"
 #include "arch.h"
+#include "speex_bits.h"
 
 #define NB_SUBMODES 16
 #define NB_SUBMODE_BITS 4
@@ -62,6 +62,50 @@
 /** Used internally*/
 #define SPEEX_GET_STACK   106
 
+/** Struct defining a Speex mode */
+typedef struct SpeexMode {
+   /** Pointer to the low-level mode data */
+   const void *mode;
+
+   /** Pointer to the mode query function */
+//   mode_query_func query;
+
+   /** The name of the mode (you should not rely on this to identify the mode)*/
+   const char *modeName;
+
+   /**ID of the mode*/
+   int modeID;
+
+   /**Version number of the bitstream (incremented every time we break
+    bitstream compatibility*/
+   int bitstream_version;
+
+   /** Pointer to encoder initialization function */
+//   encoder_init_func enc_init;
+
+   /** Pointer to encoder destruction function */
+//   encoder_destroy_func enc_destroy;
+
+   /** Pointer to frame encoding function */
+//   encode_func enc;
+
+   /** Pointer to decoder initialization function */
+//   decoder_init_func dec_init;
+
+   /** Pointer to decoder destruction function */
+//   decoder_destroy_func dec_destroy;
+
+   /** Pointer to frame decoding function */
+//   decode_func dec;
+
+   /** ioctl-like requests for encoder */
+//   encoder_ctl_func enc_ctl;
+
+   /** ioctl-like requests for decoder */
+//   decoder_ctl_func dec_ctl;
+
+} SpeexMode;
+
 
 /** Quantizes LSPs */
 typedef void (*lsp_quant_func)(spx_lsp_t *, spx_lsp_t *, int, SpeexBits *);
@@ -71,8 +115,8 @@ typedef void (*lsp_unquant_func)(spx_lsp_t *, int, SpeexBits *);
 
 
 /** Long-term predictor quantization */
-typedef int (*ltp_quant_func)(spx_word16_t *, spx_word16_t *, spx_coef_t *, spx_coef_t *, 
-                              spx_coef_t *, spx_sig_t *, const void *, int, int, spx_word16_t, 
+typedef int (*ltp_quant_func)(spx_word16_t *, spx_word16_t *, spx_coef_t *, spx_coef_t *,
+                              spx_coef_t *, spx_sig_t *, const void *, int, int, spx_word16_t,
                               int, int, SpeexBits*, char *, spx_word16_t *, spx_word16_t *, int, int, int, spx_word32_t *);
 
 /** Long-term un-quantize */
@@ -81,7 +125,7 @@ typedef void (*ltp_unquant_func)(spx_word16_t *, spx_word32_t *, int, int, spx_w
 
 
 /** Innovation quantization function */
-typedef void (*innovation_quant_func)(spx_word16_t *, spx_coef_t *, spx_coef_t *, spx_coef_t *, const void *, int, int, 
+typedef void (*innovation_quant_func)(spx_word16_t *, spx_coef_t *, spx_coef_t *, spx_coef_t *, const void *, int, int,
                                       spx_sig_t *, spx_word16_t *, SpeexBits *, char *, int, int);
 
 /** Innovation unquantization function */
@@ -130,26 +174,6 @@ typedef struct SpeexNBMode {
 } SpeexNBMode;
 
 
-/** Struct defining the encoding/decoding mode for SB-CELP (wideband) */
-typedef struct SpeexSBMode {
-   const SpeexMode *nb_mode;    /**< Embedded narrowband mode */
-   int     frameSize;     /**< Size of frames used for encoding */
-   int     subframeSize;  /**< Size of sub-frames used for encoding */
-   int     lpcSize;       /**< Order of LPC filter */
-   spx_word16_t gamma1;   /**< Perceptual filter parameter #1 */
-   spx_word16_t gamma2;   /**< Perceptual filter parameter #1 */
-   spx_word16_t   lpc_floor;     /**< Noise floor for LPC analysis */
-   spx_word16_t   folding_gain;
-
-   const SpeexSubmode *submodes[SB_SUBMODES]; /**< Sub-mode data for the mode */
-   int     defaultSubmode; /**< Default sub-mode to use when encoding */
-   int     low_quality_map[11]; /**< Mode corresponding to each quality setting */
-   int     quality_map[11]; /**< Mode corresponding to each quality setting */
-#ifndef DISABLE_VBR
-   const float (*vbr_thresh)[11];
-#endif
-   int     nb_modes;
-} SpeexSBMode;
 
 int speex_encode_native(void *state, spx_word16_t *in, SpeexBits *bits);
 int speex_decode_native(void *state, SpeexBits *bits, spx_word16_t *out);

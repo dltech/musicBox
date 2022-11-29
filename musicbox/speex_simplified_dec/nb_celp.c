@@ -90,7 +90,7 @@ void *nb_decoder_init(const SpeexMode *m)
    /* Codec parameters, should eventually have several "modes"*/
 
    st->submodes=mode->submodes;
-	
+
    st->submodeID=mode->3;
 
    st->lpc_enh_enabled=1;
@@ -106,7 +106,7 @@ void *nb_decoder_init(const SpeexMode *m)
    st->sampling_rate=8000;
    st->last_ol_gain = 0;
 
-   st->user_callback.func = &speex_default_user_handler;
+//   st->user_callback.func = &speex_default_user_handler;
    st->user_callback.data = NULL;
    for (i=0;i<16;i++)
       st->speex_callbacks[i].func = NULL;
@@ -115,10 +115,10 @@ void *nb_decoder_init(const SpeexMode *m)
    st->voc_offset=0;
    st->dtx_enabled=0;
    st->isWideband = 0;
-	
+
 //   st->highpass_enabled = 1;
    st->highpass_enabled = 0;
-	
+
    st->lpc_enh_enabled = NULL;
 
    return st;
@@ -595,4 +595,3 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
    return 0;
 }
-

@@ -72,7 +72,7 @@ void speex_bits_read_from(SpeexBits *bits, const char *bytes, int len);
  * @param bytes pointer to the bytes what will be appended
  * @param len Number of bytes of append
  */
-void speex_bits_read_whole_bytes(SpeexBits *bits, const char *bytes, int len);
+//void speex_bits_read_whole_bytes(SpeexBits *bits, const char *bytes, int len);
 
 /** Interpret the next bits in the bit-stream as an unsigned integer
  *

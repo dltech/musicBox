@@ -30,15 +30,11 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "filters.h"
 #include "stack_alloc.h"
 #include "arch.h"
 #include "math_approx.h"
-#include "ltp.h"
+//#include "ltp.h"
 
 
 
@@ -49,8 +45,8 @@ void bw_lpc(spx_word16_t gamma, const spx_coef_t *lpc_in, spx_coef_t *lpc_out, i
    spx_word16_t tmp=gamma;
    for (i=0;i<order;i++)
    {
-      lpc_out[i] = MULT16_16_P15(tmp,lpc_in[i]);
-      tmp = MULT16_16_P15(tmp, gamma);
+      lpc_out[i] = (spx_coef_t)MULT16_16_P15(tmp,lpc_in[i]);
+      tmp = (spx_word16_t)MULT16_16_P15(tmp, gamma);
    }
 }
 
@@ -120,7 +116,7 @@ spx_word16_t compute_rms16(const spx_word16_t *x, int len)
       if (tmp<0)
          tmp = -tmp;
       if (tmp > max_val)
-         max_val = tmp;
+         max_val = (spx_word16_t)tmp;
    }
    if (max_val>16383)
    {
@@ -158,22 +154,6 @@ spx_word16_t compute_rms16(const spx_word16_t *x, int len)
 }
 
 
-spx_word16_t compute_rms(const spx_sig_t *x, int len)
-{
-   int i;
-   float sum=0;
-   for (i=0;i<len;i++)
-   {
-      sum += x[i]*x[i];
-   }
-   return sqrt(.1+sum/len);
-}
-spx_word16_t compute_rms16(const spx_word16_t *x, int len)
-{
-   return compute_rms(x, len);
-}
-
-
 #ifdef MERGE_FILTERS
 const spx_word16_t zeros[10] = {0,0,0,0,0,0,0,0,0,0};
 #endif  /* MERGE_FILTERS */
@@ -195,6 +175,7 @@ void filter_mem16(const spx_word16_t *x, const spx_coef_t *num, const spx_coef_t
       mem[ord-1] = ADD32(MULT16_16(num[ord-1],xi), MULT16_16(den[ord-1],nyi));
       y[i] = yi;
    }
+   (void)stack;
 }
 #endif /* !defined(OVERRIDE_FILTER_MEM16) && !defined(DISABLE_ENCODER) */
 
@@ -215,6 +196,7 @@ void iir_mem16(const spx_word16_t *x, const spx_coef_t *den, spx_word16_t *y, in
       mem[ord-1] = MULT16_16(den[ord-1],nyi);
       y[i] = yi;
    }
+   (void)stack;
 }
 #endif
 
@@ -235,6 +217,7 @@ void fir_mem16(const spx_word16_t *x, const spx_coef_t *num, spx_word16_t *y, in
       mem[ord-1] = MULT16_16(num[ord-1],xi);
       y[i] = yi;
    }
+   (void)stack;
 }
 #endif /* !defined(OVERRIDE_FIR_MEM16) && !defined(DISABLE_ENCODER) */
 
@@ -252,9 +235,6 @@ const spx_word16_t shift_filt[3][7] = {{-33,    1043,   -4551,   19959,   19959,
 const spx_word16_t shift_filt[3][7] = {{-390,    1540,   -4993,   20123,   20123,   -4993,    1540},
                                 {-1064,    2817,   -6694,   31589,    6837,    -990,    -209},
                                  {-209,    -990,    6837,   31589,   -6694,    2817,   -1064}};
-
-
-
 
 
 
@@ -284,31 +264,30 @@ char *stack
    spx_word16_t ngain;
    spx_word16_t gg1, gg2;
    int scaledown=0;
-#if 0 /* Set to 1 to enable full pitch search */
-   int nol_pitch[6];
-   spx_word16_t nol_pitch_coef[6];
-   spx_word16_t ol_pitch_coef;
-   open_loop_nbest_pitch(exc, 20, 120, nsf,
-                         nol_pitch, nol_pitch_coef, 6, stack);
-   corr_pitch=nol_pitch[0];
-   ol_pitch_coef = nol_pitch_coef[0];
-   /*Try to remove pitch multiples*/
-   for (i=1;i<6;i++)
-   {
-#ifdef FIXED_POINT
-      if ((nol_pitch_coef[i]>MULT16_16_Q15(nol_pitch_coef[0],19661)) &&
-#else
-      if ((nol_pitch_coef[i]>.6*nol_pitch_coef[0]) &&
-#endif
-         (ABS(2*nol_pitch[i]-corr_pitch)<=2 || ABS(3*nol_pitch[i]-corr_pitch)<=3 ||
-         ABS(4*nol_pitch[i]-corr_pitch)<=4 || ABS(5*nol_pitch[i]-corr_pitch)<=5))
-      {
-         corr_pitch = nol_pitch[i];
-      }
-   }
-#else
+// #if 0 /* Set to 1 to enable full pitch search */
+//    int nol_pitch[6];
+//    spx_word16_t nol_pitch_coef[6];
+//    spx_word16_t ol_pitch_coef;
+//    open_loop_nbest_pitch(exc, 20, 120, nsf,
+//                          nol_pitch, nol_pitch_coef, 6, stack);
+//    corr_pitch=nol_pitch[0];
+//    ol_pitch_coef = nol_pitch_coef[0];
+//    /*Try to remove pitch multiples*/
+//    for (i=1;i<6;i++)
+//    {
+//       if ((nol_pitch_coef[i]>MULT16_16_Q15(nol_pitch_coef[0],19661)) &&
+//
+//          (ABS(2*nol_pitch[i]-corr_pitch)<=2 || ABS(3*nol_pitch[i]-corr_pitch)<=3 ||
+//          ABS(4*nol_pitch[i]-corr_pitch)<=4 || ABS(5*nol_pitch[i]-corr_pitch)<=5))
+//       {
+//          corr_pitch = nol_pitch[i];
+//       }
+//    }
+// #else
    corr_pitch = pitch;
-#endif
+//#endif
+    (void)ak;
+    (void)p;
 
    ALLOC(iexc, 2*nsf, spx_word16_t);
 
@@ -364,14 +343,14 @@ char *stack
    gg2 = PDIV32_16(SHL32(EXTEND32(exc_mag),8), iexc1_mag);
    if (comb_gain>0)
    {
-      c1 = (MULT16_16_Q15(QCONST16(.4,15),comb_gain)+QCONST16(.07,15));
-      c2 = QCONST16(.5,15)+MULT16_16_Q14(QCONST16(1.72,14),(c1-QCONST16(.07,15)));
+      c1 = (spx_word16_t)(MULT16_16_Q15(QCONST16(.4,15),comb_gain)+QCONST16(.07,15));
+      c2 = (spx_word16_t)QCONST16(.5,15)+MULT16_16_Q14(QCONST16(1.72,14),(c1-QCONST16(.07,15)));
    } else
    {
       c1=c2=0;
    }
-   g1 = 32767 - MULT16_16_Q13(MULT16_16_Q15(c2, pgain1),pgain1);
-   g2 = 32767 - MULT16_16_Q13(MULT16_16_Q15(c2, pgain2),pgain2);
+   g1 = (spx_word16_t)(32767 - MULT16_16_Q13(MULT16_16_Q15(c2, pgain1),pgain1));
+   g2 = (spx_word16_t)(32767 - MULT16_16_Q13(MULT16_16_Q15(c2, pgain2),pgain2));
 
    if (g1<c1)
       g1 = c1;
@@ -381,11 +360,11 @@ char *stack
    g2 = (spx_word16_t)PDIV32_16(SHL32(EXTEND32(c1),14),(spx_word16_t)g2);
    if (corr_pitch>max_pitch)
    {
-      gain0 = MULT16_16_Q15(QCONST16(.7,15),MULT16_16_Q14(g1,gg1));
-      gain1 = MULT16_16_Q15(QCONST16(.3,15),MULT16_16_Q14(g2,gg2));
+      gain0 = (spx_word16_t)MULT16_16_Q15(QCONST16(.7,15),MULT16_16_Q14(g1,gg1));
+      gain1 = (spx_word16_t)MULT16_16_Q15(QCONST16(.3,15),MULT16_16_Q14(g2,gg2));
    } else {
-      gain0 = MULT16_16_Q15(QCONST16(.6,15),MULT16_16_Q14(g1,gg1));
-      gain1 = MULT16_16_Q15(QCONST16(.6,15),MULT16_16_Q14(g2,gg2));
+      gain0 = (spx_word16_t)MULT16_16_Q15(QCONST16(.6,15),MULT16_16_Q14(g1,gg1));
+      gain1 = (spx_word16_t)MULT16_16_Q15(QCONST16(.6,15),MULT16_16_Q14(g2,gg2));
    }
    for (i=0;i<nsf;i++)
       new_exc[i] = ADD16(exc[i], EXTRACT16(PSHR32(ADD32(MULT16_16(gain0,iexc[i]), MULT16_16(gain1,iexc[i+nsf])),8)));
@@ -402,7 +381,7 @@ char *stack
    ngain = PDIV32_16(SHL32(EXTEND32(old_ener),14),new_ener);
 
    for (i=0;i<nsf;i++)
-      new_exc[i] = MULT16_16_Q14(ngain, new_exc[i]);
+      new_exc[i] = (spx_word16_t)MULT16_16_Q14(ngain, new_exc[i]);
 
    if (scaledown)
    {
@@ -412,4 +391,3 @@ char *stack
          new_exc[i] = SHL16(SATURATE16(new_exc[i],16383),1);
    }
 }
-

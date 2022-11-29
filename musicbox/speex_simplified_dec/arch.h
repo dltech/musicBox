@@ -7,18 +7,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,35 +43,6 @@
 #define SPEEX_VERSION "speex-1.2.1"   /**< Speex version string. */
 #endif
 
-/* A couple test to catch stupid option combinations */
-#ifdef FIXED_POINT
-
-#ifdef FLOATING_POINT
-#error You cannot compile as floating point and fixed point at the same time
-#endif
-#ifdef _USE_SSE
-#error SSE is only for floating-point
-#endif
-#if ((defined (ARM4_ASM)||defined (ARM4_ASM)) && defined(BFIN_ASM)) || (defined (ARM4_ASM)&&defined(ARM5E_ASM))
-#error Make up your mind. What CPU do you have?
-#endif
-#ifdef VORBIS_PSYCHO
-#error Vorbis-psy model currently not implemented in fixed-point
-#endif
-
-#else
-
-#ifndef FLOATING_POINT
-#error You now need to define either FIXED_POINT or FLOATING_POINT
-#endif
-#if defined (ARM4_ASM) || defined(ARM5E_ASM) || defined(BFIN_ASM)
-#error I suppose you can have a [ARM4/ARM5E/Blackfin] that has float instructions?
-#endif
-#ifdef FIXED_POINT_DEBUG
-#error "Don't you think enabling fixed-point is a good thing to do if you want to debug that?"
-#endif
-
-
 #endif
 
 #include "speex_types.h"
@@ -83,8 +54,6 @@
 #define ABS32(x) ((x) < 0 ? (-(x)) : (x))    /**< Absolute 32-bit value.  */
 #define MIN32(a,b) ((a) < (b) ? (a) : (b))   /**< Maximum 32-bit value.   */
 #define MAX32(a,b) ((a) > (b) ? (a) : (b))   /**< Maximum 32-bit value.   */
-
-#ifdef FIXED_POINT
 
 typedef spx_int16_t spx_word16_t;
 typedef spx_int32_t spx_word32_t;
@@ -117,4 +86,3 @@ typedef spx_word32_t spx_sig_t;
 #define BYTES_PER_CHAR 1
 #define BITS_PER_CHAR 8
 #define LOG2_BITS_PER_CHAR 3
-

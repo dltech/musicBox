@@ -7,18 +7,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -37,28 +37,13 @@
 
 #include "arch.h"
 
-#ifndef FIXED_POINT
 
-#define spx_sqrt sqrt
-#define spx_acos acos
-#define spx_exp exp
-#define spx_cos_norm(x) (cos((.5f*M_PI)*(x)))
-#define spx_atan atan
+// #define spx_sqrt sqrt
+// #define spx_acos acos
+// #define spx_exp exp
+// #define spx_cos_norm(x) (cos((.5f*M_PI)*(x)))
+// #define spx_atan atan
 
-/** Generate a pseudo-random number */
-static inline spx_word16_t speex_rand(spx_word16_t std, spx_uint32_t *seed)
-{
-   const unsigned int jflone = 0x3f800000;
-   const unsigned int jflmsk = 0x007fffff;
-   union {int i; float f;} ran;
-   *seed = 1664525 * *seed + 1013904223;
-   ran.i = jflone | (jflmsk & *seed);
-   ran.f -= 1.5;
-   return 3.4642*std*ran.f;
-}
-
-
-#endif
 
 
 static inline spx_int16_t spx_ilog2(spx_uint32_t x)
@@ -88,7 +73,7 @@ static inline spx_int16_t spx_ilog2(spx_uint32_t x)
    {
       r += 1;
    }
-   return r;
+   return (spx_int16_t)r;
 }
 
 static inline spx_int16_t spx_ilog4(spx_uint32_t x)
@@ -113,10 +98,9 @@ static inline spx_int16_t spx_ilog4(spx_uint32_t x)
    {
       r += 1;
    }
-   return r;
+   return (spx_int16_t)r;
 }
 
-#ifdef FIXED_POINT
 
 /** Generate a pseudo-random number */
 static inline spx_word16_t speex_rand(spx_word16_t std, spx_uint32_t *seed)
@@ -143,11 +127,11 @@ static inline spx_word16_t spx_sqrt(spx_word32_t x)
 {
    int k;
    spx_word32_t rt;
-   k = spx_ilog4(x)-6;
+   k = spx_ilog4((spx_uint32_t)x)-6;
    x = VSHR32(x, (k<<1));
    rt = ADD16(C0, MULT16_16_Q14(x, ADD16(C1, MULT16_16_Q14(x, ADD16(C2, MULT16_16_Q14(x, (C3)))))));
    rt = VSHR32(rt,7-k);
-   return rt;
+   return (spx_word16_t)rt;
 }
 
 /* log(x) ~= -2.18151 + 4.20592*x - 2.88938*x^2 + 0.86535*x^3 (for .5 < x < 1) */
@@ -161,18 +145,18 @@ static inline spx_word16_t spx_acos(spx_word16_t x)
 {
    int s=0;
    spx_word16_t ret;
-   spx_word16_t sq;
+   spx_word32_t sq;
    if (x<0)
    {
       s=1;
       x = NEG16(x);
    }
    x = SUB16(16384,x);
-   
+
    x = x >> 1;
    sq = MULT16_16_Q13(x, ADD16(A1, MULT16_16_Q13(x, ADD16(A2, MULT16_16_Q13(x, (A3))))));
    ret = spx_sqrt(SHL32(EXTEND32(sq),13));
-   
+
    /*ret = spx_sqrt(67108864*(-1.6129e-04 + 2.0104e+00*f + 2.7373e-01*f*f + 1.8136e-01*f*f*f));*/
    if (s)
       ret = SUB16(25736,ret);
@@ -187,16 +171,16 @@ static inline spx_word16_t spx_acos(spx_word16_t x)
 
 static inline spx_word16_t spx_cos(spx_word16_t x)
 {
-   spx_word16_t x2;
+   spx_word32_t x2;
 
    if (x<12868)
    {
       x2 = MULT16_16_P13(x,x);
-      return ADD32(K1, MULT16_16_P13(x2, ADD32(K2, MULT16_16_P13(x2, ADD32(K3, MULT16_16_P13(K4, x2))))));
+      return (spx_word16_t)ADD32(K1, MULT16_16_P13(x2, ADD32(K2, MULT16_16_P13(x2, ADD32(K3, MULT16_16_P13(K4, x2))))));
    } else {
       x = SUB16(25736,x);
       x2 = MULT16_16_P13(x,x);
-      return SUB32(-K1, MULT16_16_P13(x2, ADD32(K2, MULT16_16_P13(x2, ADD32(K3, MULT16_16_P13(K4, x2))))));
+      return (spx_word16_t)SUB32(-K1, MULT16_16_P13(x2, ADD32(K2, MULT16_16_P13(x2, ADD32(K3, MULT16_16_P13(K4, x2))))));
    }
 }
 
@@ -207,10 +191,10 @@ static inline spx_word16_t spx_cos(spx_word16_t x)
 
 static inline spx_word16_t _spx_cos_pi_2(spx_word16_t x)
 {
-   spx_word16_t x2;
-   
+   spx_word32_t x2;
+
    x2 = MULT16_16_P15(x,x);
-   return ADD16(1,MIN16(32766,ADD32(SUB16(L1,x2), MULT16_16_P15(x2, ADD32(L2, MULT16_16_P15(x2, ADD32(L3, MULT16_16_P15(L4, x2))))))));
+   return (spx_word16_t)ADD16(1,MIN16(32766,ADD32(SUB16(L1,x2), MULT16_16_P15(x2, ADD32(L2, MULT16_16_P15(x2, ADD32(L3, MULT16_16_P15(L4, x2))))))));
 }
 
 static inline spx_word16_t spx_cos_norm(spx_word32_t x)
@@ -250,7 +234,7 @@ static inline spx_word16_t spx_cos_norm(spx_word32_t x)
 static inline spx_word32_t spx_exp2(spx_word16_t x)
 {
    int integer;
-   spx_word16_t frac;
+   spx_word32_t frac;
    integer = SHR16(x,11);
    if (integer>14)
       return 0x7fffffff;
@@ -269,7 +253,7 @@ static inline spx_word32_t spx_exp(spx_word16_t x)
    else if (x<-21290)
       return 0;
    else
-      return spx_exp2(MULT16_16_P14(23637,x));
+      return spx_exp2((spx_word16_t)MULT16_16_P14(23637,(spx_word32_t)x));
 }
 #define M1 32767
 #define M2 -21
@@ -278,7 +262,7 @@ static inline spx_word32_t spx_exp(spx_word16_t x)
 
 static inline spx_word16_t spx_atan01(spx_word16_t x)
 {
-   return MULT16_16_P15(x, ADD32(M1, MULT16_16_P15(x, ADD32(M2, MULT16_16_P15(x, ADD32(M3, MULT16_16_P15(M4, x)))))));
+   return (spx_word16_t)MULT16_16_P15(x, ADD32(M1, MULT16_16_P15(x, ADD32(M2, MULT16_16_P15(x, ADD32(M3, MULT16_16_P15(M4, x)))))));
 }
 
 #undef M1
@@ -291,42 +275,15 @@ static inline spx_word16_t spx_atan(spx_word32_t x)
 {
    if (x <= 32767)
    {
-      return SHR16(spx_atan01(x),1);
+      return (spx_word16_t)SHR16(spx_atan01((spx_word16_t)x),1);
    } else {
-      int e = spx_ilog2(x);
+      int e = spx_ilog2((spx_uint32_t)x);
       if (e>=29)
          return 25736;
       x = DIV32_16(SHL32(EXTEND32(32767),29-e), EXTRACT16(SHR32(x, e-14)));
-      return SUB16(25736, SHR16(spx_atan01(x),1));
+      return (spx_word16_t)SUB16(25736, SHR16(spx_atan01((spx_word16_t)x),1));
    }
 }
-#else
-
-#ifndef M_PI
-#define M_PI           3.14159265358979323846  /* pi */
-#endif
-
-#define C1 0.9999932946f
-#define C2 -0.4999124376f
-#define C3 0.0414877472f
-#define C4 -0.0012712095f
-
-
-#define SPX_PI_2 1.5707963268
-static inline spx_word16_t spx_cos(spx_word16_t x)
-{
-   if (x<SPX_PI_2)
-   {
-      x *= x;
-      return C1 + x*(C2+x*(C3+C4*x));
-   } else {
-      x = M_PI-x;
-      x *= x;
-      return NEG16(C1 + x*(C2+x*(C3+C4*x)));
-   }
-}
-
-#endif
 
 
 #endif
