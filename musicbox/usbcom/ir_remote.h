@@ -19,8 +19,8 @@
  */
 
 #include "inttypes.h"
-#include "../lib/regs/gpio_regs.h"
-#include "../lib/STM32F103_CMSIS/stm32f103.h"
+#include "../stm32/regs/gpio_regs.h"
+#include "../stm32/STM32F103_CMSIS/stm32f103.h"
 
 // port poll frequency in us
 #define POLL_RATE        200//200

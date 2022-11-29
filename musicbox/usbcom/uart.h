@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 #include <inttypes.h>
-#include "../lib/STM32F103_CMSIS/stm32f103.h"
+#include "../stm32/STM32F103_CMSIS/stm32f103.h"
 
 // linecoding parameters
 #define LINECODING_SIZE 7

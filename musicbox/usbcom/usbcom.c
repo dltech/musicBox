@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "../lib/STM32F103_CMSIS/stm32f103.h"
+#include "../stm32/STM32F103_CMSIS/stm32f103.h"
 #include "usb_core.h"
 #include "ir_remote.h"
 #include "usbcom.h"

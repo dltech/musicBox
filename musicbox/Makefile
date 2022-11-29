@@ -1,26 +1,37 @@
 #paths
-TARGET = ../result/usbcom
-LIB_DIR = lib
+TARGET = ../result/musicbox
+LIB_DIR = stm32
 REG_DIR	= $(LIB_DIR)/regs
 USB_DIR = usbcom
+SPEEX_DIR = speex_simplest_dec
 ODIR = bin
 BINDIR = bin
 
 # code is here
 SOURCES = main.c
-SOURCES += ir_remote.c
-SOURCES += usbcom.c
-SOURCES += usb_core.c
-SOURCES += usb_cdc_req.c
-SOURCES += usb_st_req.c
-SOURCES += uart.c
+#usb connection
+SOURCES += $(USB_DIR)/ir_remote.c
+SOURCES += $(USB_DIR)/usbcom.c
+SOURCES += $(USB_DIR)/usb_core.c
+SOURCES += $(USB_DIR)/usb_cdc_req.c
+SOURCES += $(USB_DIR)/usb_st_req.c
+SOURCES += $(USB_DIR)/uart.c
+# stm32 lib
 SOURCES += $(LIB_DIR)/rcc.c
 SOURCES += $(LIB_DIR)/delay.c
 SOURCES += $(REG_DIR)/usb_device_regs.c
+# speex lib
+SOURCES += $(SPEEX_DIR)/bits.c
+SOURCES += $(SPEEX_DIR)/filters.c
+SOURCES += $(SPEEX_DIR)/lsp.c
+SOURCES += $(SPEEX_DIR)/modes.c
+SOURCES += $(SPEEX_DIR)/nb_celp.c
+SOURCES += $(SPEEX_DIR)/vq.c
 
 INCLUDES   = -I $(LIB_DIR)/
 INCLUDES  += -I $(REG_DIR)/
-INCLUDES  += -I /
+INCLUDES  += -I $(SPEEX_DIR)/
+INCLUDES  += -I $(USB_DIR)/
 
 # VENDOR SPECIFIC CODE
 CMSIS_INC  = $(LIB_DIR)/CMSIS_5/CMSIS/Core/Include

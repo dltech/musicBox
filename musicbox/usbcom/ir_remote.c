@@ -17,8 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "../lib/regs/tim_regs.h"
-#include "../lib/regs/rcc_regs.h"
+#include "../stm32/regs/tim_regs.h"
+#include "../stm32/regs/rcc_regs.h"
 #include "usb_core.h"
 #include "ir_remote.h"
 

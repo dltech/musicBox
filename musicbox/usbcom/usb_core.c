@@ -16,10 +16,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "../lib/STM32F103_CMSIS/stm32f103.h"
-#include "../lib/rcc.h"
-#include "../lib/delay.h"
-#include "../lib/regs/usb_device_regs.h"
+#include "../stm32/STM32F103_CMSIS/stm32f103.h"
+#include "../stm32/rcc.h"
+#include "../stm32/delay.h"
+#include "../stm32/regs/usb_device_regs.h"
 #include "usb_st_req.h"
 #include "usb_cdc_req.h"
 #include "uart.h"
