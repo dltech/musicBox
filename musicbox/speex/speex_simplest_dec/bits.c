@@ -117,15 +117,6 @@ EXPORT void speex_bits_read_from(SpeexBits *bits, const char *chars, int len)
    bits->overflow=0;
 }
 
-static void speex_bits_flush(SpeexBits *bits)
-{
-   int nchars = ((bits->nbBits+BITS_PER_CHAR-1)>>LOG2_BITS_PER_CHAR);
-   if (bits->charPtr>0)
-      SPEEX_MOVE(bits->chars, &bits->chars[bits->charPtr], nchars-bits->charPtr);
-   bits->nbBits -= bits->charPtr<<LOG2_BITS_PER_CHAR;
-   bits->charPtr=0;
-}
-
 EXPORT void speex_bits_read_whole_bytes(SpeexBits *bits, const char *chars, int nbytes)
 {
    int i,pos;
@@ -197,5 +188,3 @@ EXPORT int speex_bits_remaining(SpeexBits *bits)
    else
       return bits->nbBits-((bits->charPtr<<LOG2_BITS_PER_CHAR)+bits->bitPtr);
 }
-
-

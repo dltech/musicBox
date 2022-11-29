@@ -1,8 +1,9 @@
 #paths
 TARGET = ../result/usbcom
-LIB_DIR = ../lib
+LIB_DIR = lib
 REG_DIR	= $(LIB_DIR)/regs
-ODIR = bin/usbcom
+USB_DIR = usbcom
+ODIR = bin
 BINDIR = bin
 
 # code is here

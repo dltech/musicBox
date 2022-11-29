@@ -41,10 +41,6 @@
  *  @{
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** Bit-packing data structure representing (part of) a bit-stream. */
 typedef struct SpeexBits {
    char *chars;   /**< "raw" data */
@@ -78,8 +74,6 @@ void speex_bits_read_from(SpeexBits *bits, const char *bytes, int len);
  */
 void speex_bits_read_whole_bytes(SpeexBits *bits, const char *bytes, int len);
 
-
-
 /** Interpret the next bits in the bit-stream as an unsigned integer
  *
  * @param bits Bit-stream to operate on
@@ -103,9 +97,4 @@ void speex_bits_advance(SpeexBits *bits, int n);
 int speex_bits_remaining(SpeexBits *bits);
 
 
-#ifdef __cplusplus
-}
-#endif
-
-/* @} */
 #endif

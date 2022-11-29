@@ -6,6 +6,7 @@ A speex codec based musical box, functions:\
 *uploading songs through usb\
 *single battery supply (using dc-dc)\
 *1W power amp\
+*RGB disco led
 
 This project is not released yet, but never will be closed.\
 TODO:\
