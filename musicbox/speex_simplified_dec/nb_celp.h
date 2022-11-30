@@ -110,4 +110,6 @@ void *nb_decoder_init(const SpeexMode *m);
 int nb_decode(void *state, SpeexBits *bits, void *out);
 
 
+#define speex_assert(cond) {if (!(cond)){;}}
+
 #endif

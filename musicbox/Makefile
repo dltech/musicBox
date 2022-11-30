@@ -29,6 +29,10 @@ SOURCES += $(SPEEX_DIR)/cb_search.c
 SOURCES += $(SPEEX_DIR)/quant_lsp.c
 SOURCES += $(SPEEX_DIR)/modes.c
 SOURCES += $(SPEEX_DIR)/nb_celp.c
+SOURCES += $(SPEEX_DIR)/exc_10_32_table.c
+SOURCES += $(SPEEX_DIR)/lsp_tables_nb.c
+SOURCES += $(SPEEX_DIR)/gain_table_lbr.c
+
 
 INCLUDES   = -I $(LIB_DIR)/
 INCLUDES  += -I $(REG_DIR)/

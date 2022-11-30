@@ -30,6 +30,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "string.h"
 #include "ltp.h"
 #include "stack_alloc.h"
 #include "filters.h"
@@ -57,3 +58,93 @@ spx_word32_t inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
    return sum;
 }
 #endif
+
+void pitch_unquant_3tap(
+spx_word16_t exc[],             /* Input excitation */
+spx_word32_t exc_out[],         /* Output excitation */
+int   start,                    /* Smallest pitch value allowed */
+int   end,                      /* Largest pitch value allowed */
+spx_word16_t pitch_coef,        /* Voicing (pitch) coefficient */
+const void *par,
+int   nsf,                      /* Number of samples in subframe */
+int *pitch_val,
+spx_word16_t *gain_val,
+SpeexBits *bits,
+char *stack,
+int count_lost,
+int subframe_offset,
+spx_word16_t last_pitch_gain,
+int cdbk_offset
+)
+{
+   int i;
+   int pitch;
+   int gain_index;
+   spx_word16_t gain[3];
+   const signed char *gain_cdbk;
+   int gain_cdbk_size;
+   const ltp_params *params;
+
+   params = (const ltp_params*) par;
+   gain_cdbk_size = 1<<params->gain_bits;
+   gain_cdbk = params->gain_cdbk + 4*gain_cdbk_size*cdbk_offset;
+
+   pitch = (int)speex_bits_unpack_unsigned(bits, params->pitch_bits);
+   pitch += start;
+   gain_index = (int)speex_bits_unpack_unsigned(bits, params->gain_bits);
+   /*printf ("decode pitch: %d %d\n", pitch, gain_index);*/
+   gain[0] = ADD16(32,(spx_word16_t)gain_cdbk[gain_index*4]);
+   gain[1] = ADD16(32,(spx_word16_t)gain_cdbk[gain_index*4+1]);
+   gain[2] = ADD16(32,(spx_word16_t)gain_cdbk[gain_index*4+2]);
+
+   if (count_lost && pitch > subframe_offset)
+   {
+      spx_word16_t gain_sum;
+      if (1) {
+
+         spx_word16_t tmp = count_lost < 4 ? last_pitch_gain : SHR16(last_pitch_gain,1);
+         if (tmp>62)
+            tmp=62;
+         gain_sum = (spx_word16_t)gain_3tap_to_1tap(gain);
+
+         if (gain_sum > tmp)
+         {
+            spx_word16_t fact = DIV32_16(SHL32(EXTEND32(tmp),14),gain_sum);
+            for (i=0;i<3;i++)
+               gain[i]=(spx_word16_t)MULT16_16_Q14(fact,gain[i]);
+         }
+
+      }
+
+   }
+
+   *pitch_val = pitch;
+   gain_val[0]=gain[0];
+   gain_val[1]=gain[1];
+   gain_val[2]=gain[2];
+   gain[0] = SHL16(gain[0],7);
+   gain[1] = SHL16(gain[1],7);
+   gain[2] = SHL16(gain[2],7);
+   memset(exc_out, 0, (unsigned)nsf*2);
+   for (i=0;i<3;i++)
+   {
+      int j;
+      int tmp1, tmp3;
+      int pp=pitch+1-i;
+      tmp1=nsf;
+      if (tmp1>pp)
+         tmp1=pp;
+      for (j=0;j<tmp1;j++)
+         exc_out[j]=MAC16_16(exc_out[j],gain[2-i],exc[j-pp]);
+      tmp3=nsf;
+      if (tmp3>pp+pitch)
+         tmp3=pp+pitch;
+      for (j=tmp1;j<tmp3;j++)
+         exc_out[j]=MAC16_16(exc_out[j],gain[2-i],exc[j-pp-pitch]);
+   }
+   /*for (i=0;i<nsf;i++)
+   exc[i]=PSHR32(exc32[i],13);*/
+   (void)end;
+   (void)pitch_coef;
+   (void)stack;
+}

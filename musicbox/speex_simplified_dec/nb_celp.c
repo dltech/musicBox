@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "lsp.h"
+#include "ltp.h"
 #include "filters.h"
 #include "modes.h"
 
@@ -50,15 +51,14 @@
 
 /* Default size for the encoder and decoder stack (can be changed at compile time).
    This does not apply when using variable-size arrays or alloca. */
-#ifndef NB_DEC_STACK
-#define NB_DEC_STACK (4000*sizeof(spx_sig_t))
-#endif
+//#define NB_DEC_STACK (4000*sizeof(spx_sig_t))
+#define NB_DEC_STACK (1*sizeof(spx_sig_t))
 
 
 static const spx_word32_t ol_gain_table[32]={18900, 25150, 33468, 44536, 59265, 78865, 104946, 139653, 185838, 247297, 329081, 437913, 582736, 775454, 1031906, 1373169, 1827293, 2431601, 3235761, 4305867, 5729870, 7624808, 10146425, 13501971, 17967238, 23909222, 31816294, 42338330, 56340132, 74972501, 99766822, 132760927};
-static const spx_word16_t exc_gain_quant_scal3_bound[7]={1841, 3883, 6051, 8062, 10444, 13580, 18560};
+//static const spx_word16_t exc_gain_quant_scal3_bound[7]={1841, 3883, 6051, 8062, 10444, 13580, 18560};
 static const spx_word16_t exc_gain_quant_scal3[8]={1002, 2680, 5086, 7016, 9108, 11781, 15380, 21740};
-static const spx_word16_t exc_gain_quant_scal1_bound[1]={14385};
+//static const spx_word16_t exc_gain_quant_scal1_bound[1]={14385};
 static const spx_word16_t exc_gain_quant_scal1[2]={11546, 17224};
 
 #define LSP_MARGIN 16
@@ -314,20 +314,20 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
    /* Get open-loop pitch estimation for low bit-rate pitch coding */
    if (SUBMODE(lbr_pitch)!=-1)
    {
-      ol_pitch = NB_PITCH_START+speex_bits_unpack_unsigned(bits, 7);
+      ol_pitch = (int)(NB_PITCH_START+speex_bits_unpack_unsigned(bits, 7));
    }
 
    if (SUBMODE(forced_pitch_gain))
    {
       int quant;
-      quant = speex_bits_unpack_unsigned(bits, 4);
-      ol_pitch_coef=MULT16_16_P15(QCONST16(0.066667,15),SHL16(quant,GAIN_SHIFT));
+      quant = (int)speex_bits_unpack_unsigned(bits, 4);
+      ol_pitch_coef=(spx_word16_t)MULT16_16_P15(QCONST16(0.066667,15),SHL16(quant,GAIN_SHIFT));
    }
 
    /* Get global excitation gain */
    {
       int qe;
-      qe = speex_bits_unpack_unsigned(bits, 5);
+      qe = (int)speex_bits_unpack_unsigned(bits, 5);
       /* FIXME: Perhaps we could slightly lower the gain here when the output is going to saturate? */
       ol_gain = MULT16_32_Q15(28406,ol_gain_table[qe]);
 
@@ -340,7 +340,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
    if (st->submodeID==1)
    {
       int extra;
-      extra = speex_bits_unpack_unsigned(bits, 4);
+      extra = (int)speex_bits_unpack_unsigned(bits, 4);
 
       if (extra==15)
          st->dtx_enabled=1;
@@ -368,10 +368,10 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
 
       /* Reset excitation */
-      SPEEX_MEMSET(exc, 0, NB_SUBFRAME_SIZE);
+      memset(exc, 0, NB_SUBFRAME_SIZE*2);
 
       /*Adaptive codebook contribution*/
-      speex_assert (SUBMODE(ltp_unquant));
+      speex_assert (SUBMODE(ltp_unquant))
       {
          int pit_min, pit_max;
          /* Handle pitch constraints if any */
@@ -414,7 +414,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
          We can probably be even more aggressive and limit to 15000 or so. */
          sanitize_values32(exc32, NEG32(QCONST32(32000,SIG_SHIFT-1)), QCONST32(32000,SIG_SHIFT-1), NB_SUBFRAME_SIZE);
 
-         tmp = gain_3tap_to_1tap(pitch_gain);
+         tmp = (spx_word16_t)gain_3tap_to_1tap(pitch_gain);
 
          pitch_average += tmp;
          if ((tmp>best_pitch_gain&&ABS(2*best_pitch-pitch)>=3&&ABS(3*best_pitch-pitch)>=4&&ABS(4*best_pitch-pitch)>=5)
@@ -432,22 +432,22 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
          int q_energy;
          spx_word32_t ener;
 
-         SPEEX_MEMSET(innov, 0, NB_SUBFRAME_SIZE);
+         memset(innov, 0, NB_SUBFRAME_SIZE*2);
 
          /* Decode sub-frame gain correction */
          if (SUBMODE(have_subframe_gain)==3)
          {
-            q_energy = speex_bits_unpack_unsigned(bits, 3);
+            q_energy = (int)speex_bits_unpack_unsigned(bits, 3);
             ener = MULT16_32_Q14(exc_gain_quant_scal3[q_energy],ol_gain);
          } else if (SUBMODE(have_subframe_gain)==1)
          {
-            q_energy = speex_bits_unpack_unsigned(bits, 1);
+            q_energy = (int)speex_bits_unpack_unsigned(bits, 1);
             ener = MULT16_32_Q14(exc_gain_quant_scal1[q_energy],ol_gain);
          } else {
             ener = ol_gain;
          }
 
-         speex_assert (SUBMODE(innovation_unquant));
+         speex_assert(SUBMODE(innovation_unquant));
          {
             /*Fixed codebook contribution*/
             SUBMODE(innovation_unquant)(innov, SUBMODE(innovation_params), NB_SUBFRAME_SIZE, bits, stack, &st->seed);
@@ -469,13 +469,13 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
          if (st->submodeID==1)
          {
             spx_word16_t g=ol_pitch_coef;
-            g=MULT16_16_P14(QCONST16(1.5f,14),(g-QCONST16(.2f,6)));
+            g=(spx_word16_t)MULT16_16_P14(QCONST16(1.5f,14),(g-QCONST16(.2f,6)));
             if (g<0)
                g=0;
             if (g>GAIN_SCALING)
                g=GAIN_SCALING;
 
-            SPEEX_MEMSET(exc, 0, NB_SUBFRAME_SIZE);
+            memset(exc, 0, NB_SUBFRAME_SIZE*2);
             while (st->voc_offset<NB_SUBFRAME_SIZE)
             {
                /* exc[st->voc_offset]= g*sqrt(2*ol_pitch)*ol_gain;
@@ -510,7 +510,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
       multicomb(st->exc-NB_SUBFRAME_SIZE, out, st->interp_qlpc, NB_ORDER, 2*NB_SUBFRAME_SIZE, best_pitch, 40, SUBMODE(comb_gain), stack);
       multicomb(st->exc+NB_SUBFRAME_SIZE, out+2*NB_SUBFRAME_SIZE, st->interp_qlpc, NB_ORDER, 2*NB_SUBFRAME_SIZE, best_pitch, 40, SUBMODE(comb_gain), stack);
    } else {
-      SPEEX_COPY(out, &st->exc[-NB_SUBFRAME_SIZE], NB_FRAME_SIZE);
+      memcpy(out, &st->exc[-NB_SUBFRAME_SIZE], NB_FRAME_SIZE*2);
    }
 
    /* If the last packet was lost, re-scale the excitation to obtain the same energy as encoded in ol_gain */
@@ -528,7 +528,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
       for (i=0;i<NB_FRAME_SIZE;i++)
       {
-         st->exc[i] = MULT16_16_Q14(gain, st->exc[i]);
+         st->exc[i] = (spx_word16_t)MULT16_16_Q14(gain, st->exc[i]);
          out[i]=st->exc[i-NB_SUBFRAME_SIZE];
       }
    }
@@ -575,8 +575,8 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
      printf ("%d\n", (int)st->frame[i]);*/
 
    /* Tracking output level */
-   st->level = 1+PSHR32(ol_gain,SIG_SHIFT);
-   st->max_level = MAX16(MULT16_16_Q15(QCONST16(.99f,15), st->max_level), st->level);
+   st->level = (spx_word16_t)(1+PSHR32(ol_gain,SIG_SHIFT));
+   st->max_level = (spx_word16_t)MAX16(MULT16_16_Q15(QCONST16(.99f,15), st->max_level), st->level);
    st->min_level = MIN16(ADD16(1,MULT16_16_Q14(QCONST16(1.01f,14), st->min_level)), st->level);
    if (st->max_level < st->min_level+1)
       st->max_level = st->min_level+1;
@@ -590,13 +590,13 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
    st->first = 0;
    st->count_lost=0;
    st->last_pitch = best_pitch;
-   st->last_pitch_gain = PSHR16(pitch_average,2);
+   st->last_pitch_gain = (spx_word16_t)PSHR16(pitch_average,2);
 
    st->pitch_gain_buf[st->pitch_gain_buf_idx++] = st->last_pitch_gain;
    if (st->pitch_gain_buf_idx > 2) /* rollover */
       st->pitch_gain_buf_idx = 0;
 
-   st->last_ol_gain = ol_gain;
+   st->last_ol_gain = (spx_word16_t)ol_gain;
 
    return 0;
 }
