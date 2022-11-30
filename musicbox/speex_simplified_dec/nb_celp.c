@@ -28,6 +28,7 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include <string.h>
 
 #include "lsp.h"
 #include "filters.h"
@@ -70,58 +71,62 @@ static const spx_word16_t exc_gain_quant_scal1[2]={11546, 17224};
 extern const spx_word16_t lag_window[];
 extern const spx_word16_t lpc_window[];
 
-DecState state;
-DecState *st;
-spx_sig_t stack_tipo_alloc[NB_DEC_STACK] = 0;
-st.stack = stack_tipo_alloc;
+DecState statee;
+DecState *stt = &statee;
+spx_sig_t stack_tipo_alloc[NB_DEC_STACK] = {0};
+//spx_word16_t excBuf_tipo_alloc[NB_FRAME_SIZE + NB_PITCH_END] = {0};
 
 void *nb_decoder_init(const SpeexMode *m)
 {
    const SpeexNBMode *mode;
-   int i;
+//   int i;
+   stt->stack = (char *)stack_tipo_alloc;
 
    mode=(const SpeexNBMode*)m->mode;
 
-   st->mode=m;
+   stt->mode=m;
 
-   st->encode_submode = 1;
+   stt->encode_submode = 1;
 
-   st->first=1;
+   stt->first=1;
    /* Codec parameters, should eventually have several "modes"*/
 
-   st->submodes=mode->submodes;
+   stt->submodes=mode->submodes;
 
-   st->submodeID=mode->3;
+   stt->submodeID=3;
 
-   st->lpc_enh_enabled=1;
+   stt->lpc_enh_enabled=1;
 
-   SPEEX_MEMSET(st->excBuf, 0, NB_FRAME_SIZE + NB_PITCH_END);
+   //SPEEX_MEMSET(st->excBuf, 0, NB_FRAME_SIZE + NB_PITCH_END);
+//   st->excBuf = excBuf_tipo_alloc;
 
-   st->last_pitch = 40;
-   st->count_lost=0;
-   st->pitch_gain_buf[0] = st->pitch_gain_buf[1] = st->pitch_gain_buf[2] = 0;
-   st->pitch_gain_buf_idx = 0;
-   st->seed = 1000;
+   stt->last_pitch = 40;
+   stt->count_lost=0;
+   stt->pitch_gain_buf[0] = stt->pitch_gain_buf[1] = stt->pitch_gain_buf[2] = 0;
+   stt->pitch_gain_buf_idx = 0;
+   stt->seed = 1000;
 
-   st->sampling_rate=8000;
-   st->last_ol_gain = 0;
+   stt->sampling_rate=8000;
+   stt->last_ol_gain = 0;
 
 //   st->user_callback.func = &speex_default_user_handler;
-   st->user_callback.data = NULL;
-   for (i=0;i<16;i++)
-      st->speex_callbacks[i].func = NULL;
+//   st->user_callback.data = NULL;
+   // for (i=0;i<16;i++)
+   //    st->speex_callbacks[i].func = NULL;
 
-   st->voc_m1=st->voc_m2=st->voc_mean=0;
-   st->voc_offset=0;
-   st->dtx_enabled=0;
-   st->isWideband = 0;
+   stt->voc_m1= 0;
+   stt->voc_m2= 0;
+   stt->voc_mean=0;
+   stt->voc_offset=0;
+   stt->dtx_enabled=0;
+   stt->isWideband = 0;
 
 //   st->highpass_enabled = 1;
-   st->highpass_enabled = 0;
+   stt->highpass_enabled = 0;
 
-   st->lpc_enh_enabled = NULL;
+   stt->lpc_enh_enabled = 0;
 
-   return st;
+   return stt;
 }
 
 #define median3(a, b, c)	((a) < (b) ? ((b) < (c) ? (b) : ((a) < (c) ? (c) : (a))) : ((c) < (b) ? (b) : ((c) < (a) ? (c) : (a))))
@@ -179,12 +184,12 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
       do {
          if (speex_bits_remaining(bits)<5)
             return -1;
-         wideband = speex_bits_unpack_unsigned(bits, 1);
+         wideband = (int)speex_bits_unpack_unsigned(bits, 1);
          if (wideband) /* Skip wideband block (for compatibility) */
          {
             int submode;
             int advance;
-            advance = submode = speex_bits_unpack_unsigned(bits, SB_SUBMODE_BITS);
+            advance = submode = (int)speex_bits_unpack_unsigned(bits, SB_SUBMODE_BITS);
             /*speex_mode_query(&speex_wb_mode, SPEEX_SUBMODE_BITS_PER_FRAME, &advance);*/
             advance = wb_skip_table[submode];
             if (advance < 0)
@@ -197,10 +202,10 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
             if (speex_bits_remaining(bits)<5)
                return -1;
-            wideband = speex_bits_unpack_unsigned(bits, 1);
+            wideband = (int)speex_bits_unpack_unsigned(bits, 1);
             if (wideband)
             {
-               advance = submode = speex_bits_unpack_unsigned(bits, SB_SUBMODE_BITS);
+               advance = submode = (int)speex_bits_unpack_unsigned(bits, SB_SUBMODE_BITS);
                /*speex_mode_query(&speex_wb_mode, SPEEX_SUBMODE_BITS_PER_FRAME, &advance);*/
                advance = wb_skip_table[submode];
                if (advance < 0)
@@ -210,7 +215,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
                }
                advance -= (SB_SUBMODE_BITS+1);
                speex_bits_advance(bits, advance);
-               wideband = speex_bits_unpack_unsigned(bits, 1);
+               wideband = (int)speex_bits_unpack_unsigned(bits, 1);
                if (wideband)
                {
                   //speex_notify("More than two wideband layers found. The stream is corrupted.");
@@ -222,20 +227,20 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
          if (speex_bits_remaining(bits)<4)
             return -1;
          /* FIXME: Check for overflow */
-         m = speex_bits_unpack_unsigned(bits, 4);
+         m = (int)speex_bits_unpack_unsigned(bits, 4);
          if (m==15) /* We found a terminator */
          {
             return -1;
          } else if (m==14) /* Speex in-band request */
          {
-            int ret = speex_inband_handler(bits, st->speex_callbacks, state);
-            if (ret)
-               return ret;
+//            int ret = speex_inband_handler(bits, st->speex_callbacks, state);
+//            if (ret)
+               return -50;//ret;
          } else if (m==13) /* User in-band request */
          {
-            int ret = st->user_callback.func(bits, state, st->user_callback.data);
-            if (ret)
-               return ret;
+//            int ret = st->user_callback.func(bits, state, st->user_callback.data);
+//            if (ret)
+               return -50;//ret;
          } else if (m>8) /* Invalid mode */
          {
             //speex_notify("Invalid mode encountered. The stream is corrupted.");
@@ -251,7 +256,7 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
    }
 
    /* Shift all buffers by one frame */
-   SPEEX_MOVE(st->excBuf, st->excBuf+NB_FRAME_SIZE, 2*NB_PITCH_END + NB_SUBFRAME_SIZE + 12);
+   memmove(st->excBuf, st->excBuf+NB_FRAME_SIZE, (2*NB_PITCH_END + NB_SUBFRAME_SIZE + 12)*2);
 
    /* If null mode (no transmission), just set a couple things to zero*/
    if (st->submodes[st->submodeID] == NULL)

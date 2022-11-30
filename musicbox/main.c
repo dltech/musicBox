@@ -1,7 +1,7 @@
 #include "inttypes.h"
 #include "usbcom.h"
-#include "../speex/speex_simplest_dec/nb_celp.h"
-#include "../speex/speex_simplest_dec/modes.h"
+#include "../speex_simplified_dec/nb_celp.h"
+#include "../speex_simplified_dec/modes.h"
 
 extern const SpeexMode speex_nb_mode;
 SpeexBits bits;

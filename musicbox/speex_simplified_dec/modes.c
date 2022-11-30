@@ -32,25 +32,20 @@
 
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "modes.h"
 #include "ltp.h"
 #include "quant_lsp.h"
 #include "cb_search.h"
-#include "sb_celp.h"
+//#include "sb_celp.h"
 #include "nb_celp.h"
-#include "vbr.h"
+//#include "vbr.h"
 #include "arch.h"
-#include <math.h>
 
 #ifndef NULL
 #define NULL 0
 #endif
 
-#ifdef DISABLE_ENCODER
+//#ifdef DISABLE_ENCODER
 #define nb_encoder_init NULL
 #define nb_encoder_destroy NULL
 #define nb_encode NULL
@@ -62,21 +57,21 @@
 #define forced_pitch_quant NULL
 #define lsp_quant_nb NULL
 #define lsp_quant_lbr NULL
-#endif /* DISABLE_ENCODER */
+//#endif /* DISABLE_ENCODER */
 
-#ifdef DISABLE_DECODER
-#define nb_decoder_init NULL
-#define nb_decoder_destroy NULL
-#define nb_decode NULL
-#define nb_decoder_ctl NULL
-
-#define noise_codebook_unquant NULL
-#define split_cb_shape_sign_unquant NULL
-#define lsp_unquant_nb NULL
-#define lsp_unquant_lbr NULL
-#define pitch_unquant_3tap NULL
-#define forced_pitch_unquant NULL
-#endif /* DISABLE_DECODER */
+// #ifdef DISABLE_DECODER
+// #define nb_decoder_init NULL
+// #define nb_decoder_destroy NULL
+// #define nb_decode NULL
+// #define nb_decoder_ctl NULL
+//
+// #define noise_codebook_unquant NULL
+// #define split_cb_shape_sign_unquant NULL
+// #define lsp_unquant_nb NULL
+// #define lsp_unquant_lbr NULL
+// #define pitch_unquant_3tap NULL
+// #define forced_pitch_unquant NULL
+// #endif /* DISABLE_DECODER */
 
 /* Extern declarations for all codebooks we use here */
 extern const signed char gain_cdbk_nb[];
@@ -291,26 +286,26 @@ static const SpeexSubmode nb_submode5 = {
    300
 };
 
-/* 18.2 high bit-rate mode */
-static const SpeexSubmode nb_submode6 = {
-   -1,
-   0,
-   3,
-   0,
-   /*LSP quantization*/
-   lsp_quant_nb,
-   lsp_unquant_nb,
-   /*Pitch quantization*/
-   pitch_search_3tap,
-   pitch_unquant_3tap,
-   &ltp_params_nb,
-   /*Innovation quantization*/
-   split_cb_search_shape_sign,
-   split_cb_shape_sign_unquant,
-   &split_cb_sb,
-   QCONST16(.15,15),
-   364
-};
+// /* 18.2 high bit-rate mode */
+// static const SpeexSubmode nb_submode6 = {
+//    -1,
+//    0,
+//    3,
+//    0,
+//    /*LSP quantization*/
+//    lsp_quant_nb,
+//    lsp_unquant_nb,
+//    /*Pitch quantization*/
+//    pitch_search_3tap,
+//    pitch_unquant_3tap,
+//    &ltp_params_nb,
+//    /*Innovation quantization*/
+//    split_cb_search_shape_sign,
+//    split_cb_shape_sign_unquant,
+//    &split_cb_sb,
+//    QCONST16(.15,15),
+//    364
+// };
 
 /* Default mode for narrowband */
 static const SpeexNBMode nb_mode = {
@@ -322,7 +317,7 @@ static const SpeexNBMode nb_mode = {
    QCONST16(0.92,15),  /* gamma1 */
    QCONST16(0.6,15),   /* gamma2 */
    QCONST16(.0002,15), /*lpc_floor*/
-   {NULL, &nb_submode1, &nb_submode2, &nb_submode3, &nb_submode4, &nb_submode5, &nb_submode6, &nb_submode7,
+   {NULL, &nb_submode1, &nb_submode2, &nb_submode3, &nb_submode4, &nb_submode5, &nb_submode5, &nb_submode5,
    &nb_submode8, NULL, NULL, NULL, NULL, NULL, NULL, NULL},
    5,
    {1, 8, 2, 3, 3, 4, 4, 5, 5, 6, 7}
@@ -330,30 +325,25 @@ static const SpeexNBMode nb_mode = {
 
 
 /* Default mode for narrowband */
-EXPORT const SpeexMode speex_nb_mode = {
+const SpeexMode speex_nb_mode = {
    &nb_mode,
-   nb_mode_query,
+//   nb_mode_query,
    "narrowband",
    0,
    4,
-   nb_encoder_init,
-   nb_encoder_destroy,
-   nb_encode,
-   nb_decoder_init,
-   nb_decoder_destroy,
-   nb_decode,
-   nb_encoder_ctl,
-   nb_decoder_ctl,
+   // nb_encoder_init,
+   // nb_encoder_destroy,
+   // nb_encode,
+   // nb_decoder_init,
+   // nb_decoder_destroy,
+   // nb_decode,
+   // nb_encoder_ctl,
+   // nb_decoder_ctl,
 };
 
 
 
-EXPORT int speex_mode_query(const SpeexMode *mode, int request, void *ptr)
-{
-   return mode->query(mode->mode, request, ptr);
-}
-
-#ifdef FIXED_DEBUG
-long long spx_mips=0;
-#endif
-
+// int speex_mode_query(const SpeexMode *mode, int request, void *ptr)
+// {
+//    return mode->query(mode->mode, request, ptr);
+// }

@@ -34,7 +34,7 @@
 #include "stack_alloc.h"
 #include "arch.h"
 #include "math_approx.h"
-//#include "ltp.h"
+#include "ltp.h"
 
 
 
@@ -227,16 +227,77 @@ void fir_mem16(const spx_word16_t *x, const spx_coef_t *num, spx_word16_t *y, in
 
 
 
-#if 0
-const spx_word16_t shift_filt[3][7] = {{-33,    1043,   -4551,   19959,   19959,   -4551,    1043},
-                                 {-98,    1133,   -4425,   29179,    8895,   -2328,     444},
-                                 {444,   -2328,    8895,   29179,   -4425,    1133,     -98}};
-#else
+// #if 0
+// const spx_word16_t shift_filt[3][7] = {{-33,    1043,   -4551,   19959,   19959,   -4551,    1043},
+//                                  {-98,    1133,   -4425,   29179,    8895,   -2328,     444},
+//                                  {444,   -2328,    8895,   29179,   -4425,    1133,     -98}};
+// #else
 const spx_word16_t shift_filt[3][7] = {{-390,    1540,   -4993,   20123,   20123,   -4993,    1540},
                                 {-1064,    2817,   -6694,   31589,    6837,    -990,    -209},
                                  {-209,    -990,    6837,   31589,   -6694,    2817,   -1064}};
 
-
+ static int interp_pitch(
+ spx_word16_t *exc,          /*decoded excitation*/
+ spx_word16_t *interp,          /*decoded excitation*/
+ int pitch,               /*pitch period*/
+ int len
+ )
+ {
+    int i,j,k;
+    spx_word32_t corr[4][7];
+    spx_word32_t maxcorr;
+    int maxi, maxj;
+    for (i=0;i<7;i++)
+    {
+       corr[0][i] = inner_prod(exc, exc-pitch-3+i, len);
+    }
+    for (i=0;i<3;i++)
+    {
+       for (j=0;j<7;j++)
+       {
+          int i1, i2;
+          spx_word32_t tmp=0;
+          i1 = 3-j;
+          if (i1<0)
+             i1 = 0;
+          i2 = 10-j;
+          if (i2>7)
+             i2 = 7;
+          for (k=i1;k<i2;k++)
+             tmp += MULT16_32_Q15(shift_filt[i][k],corr[0][j+k-3]);
+          corr[i+1][j] = tmp;
+       }
+    }
+    maxi=maxj=0;
+    maxcorr = corr[0][0];
+    for (i=0;i<4;i++)
+    {
+       for (j=0;j<7;j++)
+       {
+          if (corr[i][j] > maxcorr)
+          {
+             maxcorr = corr[i][j];
+             maxi=i;
+             maxj=j;
+          }
+       }
+    }
+    for (i=0;i<len;i++)
+    {
+       spx_word32_t tmp = 0;
+       if (maxi>0)
+       {
+          for (k=0;k<7;k++)
+          {
+             tmp += MULT16_16(exc[i-(pitch-maxj+3)+k-3],shift_filt[maxi-1][k]);
+          }
+       } else {
+          tmp = SHL32(exc[i-(pitch-maxj+3)],15);
+       }
+       interp[i] = (spx_word16_t)PSHR32(tmp,15);
+    }
+    return pitch-maxj+3;
+ }
 
 void multicomb(
 spx_word16_t *exc,          /*decoded excitation*/
@@ -344,7 +405,7 @@ char *stack
    if (comb_gain>0)
    {
       c1 = (spx_word16_t)(MULT16_16_Q15(QCONST16(.4,15),comb_gain)+QCONST16(.07,15));
-      c2 = (spx_word16_t)QCONST16(.5,15)+MULT16_16_Q14(QCONST16(1.72,14),(c1-QCONST16(.07,15)));
+      c2 = (spx_word16_t)(QCONST16(.5,15)+MULT16_16_Q14(QCONST16(1.72,14),(c1-QCONST16(.07,15))));
    } else
    {
       c1=c2=0;

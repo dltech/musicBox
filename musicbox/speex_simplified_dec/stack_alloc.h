@@ -72,10 +72,11 @@
  * @param size Number of elements
  * @param type Type of element
  */
+#include "inttypes.h"
 
-#define ALIGN(stack, size) ((stack) += ((size) - (long)(stack)) & ((size) - 1))
+#define ALIGN(stack, size) ((stack) += ((size) - (long unsigned)(stack)) & ((size) - 1))
 
-#define PUSH(stack, size, type) (ALIGN((stack),sizeof(type)),(stack)+=((size)*sizeof(type)),(type*)((stack)-((size)*sizeof(type))))
+#define PUSH(stack, size, type) (ALIGN((stack),sizeof(type)),(stack)+=((unsigned)(size)*sizeof(type)),(type*)((stack)-((unsigned)(size)*sizeof(type))))
 
 #define VARDECL(var) var
 #define ALLOC(var, size, type) var = PUSH(stack, size, type)
