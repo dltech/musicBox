@@ -6,6 +6,7 @@
 extern const SpeexMode speex_nb_mode;
 SpeexBits bits;
 uint8_t music[50];
+//spx_word16_t output_frame[100];
 spx_word16_t output_frame[NB_FRAME_SIZE];
 
 int main(void) {

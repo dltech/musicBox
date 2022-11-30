@@ -51,8 +51,8 @@
 
 /* Default size for the encoder and decoder stack (can be changed at compile time).
    This does not apply when using variable-size arrays or alloca. */
-//#define NB_DEC_STACK (4000*sizeof(spx_sig_t))
-#define NB_DEC_STACK (1*sizeof(spx_sig_t))
+#define NB_DEC_STACK (1000*sizeof(spx_sig_t))
+//#define NB_DEC_STACK (1*sizeof(spx_sig_t))
 
 
 static const spx_word32_t ol_gain_table[32]={18900, 25150, 33468, 44536, 59265, 78865, 104946, 139653, 185838, 247297, 329081, 437913, 582736, 775454, 1031906, 1373169, 1827293, 2431601, 3235761, 4305867, 5729870, 7624808, 10146425, 13501971, 17967238, 23909222, 31816294, 42338330, 56340132, 74972501, 99766822, 132760927};

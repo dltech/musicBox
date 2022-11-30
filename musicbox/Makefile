@@ -1,5 +1,6 @@
 #paths
-TARGET = ../result/musicbox
+TARGET = musicbox
+TARGET_PATH = ../result
 LIB_DIR = stm32
 REG_DIR	= $(LIB_DIR)/regs
 USB_DIR = usbcom
@@ -66,6 +67,7 @@ CC = arm-none-eabi-gcc
 LD = arm-none-eabi-gcc
 OBJCOPY	= arm-none-eabi-objcopy
 OBJDUMP	= arm-none-eabi-objdump
+SIZE	= arm-none-eabi-size
 
 ### making-taking aaaa #########################################################
 
@@ -73,28 +75,32 @@ OBJDUMP	= arm-none-eabi-objdump
 OBJECTS = $(SOURCES:%.c=$(ODIR)/%.o)
 
 #main rule
-all: $(TARGET).elf $(ODIR).bin $(ODIR).lst
+all: $(TARGET_PATH)/$(TARGET).elf $(ODIR)/$(TARGET).bin $(ODIR)/$(TARGET).lst
 #compile
 $(ODIR)/%.o: %.c
 	@echo "[CC] $@"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) $(INCLUDES) $(DEFS) -c $< -o $@
 #link
-$(TARGET).elf: $(OBJECTS)
+$(TARGET_PATH)/$(TARGET).elf: $(OBJECTS)
 	@echo "[LD] $@"
 	@$(LD) $(CFLAGS) $(LFLAGS) $(OBJECTS) -o $@
 
-$(ODIR).bin: $(TARGET).elf
+$(ODIR)/$(TARGET).bin: $(TARGET_PATH)/$(TARGET).elf
 	@echo "[OBJCOPY] $@"
 	@$(OBJCOPY) -O binary  $< $@
 
-$(ODIR).lst: $(TARGET).elf
+$(ODIR)/$(TARGET).lst: $(TARGET_PATH)/$(TARGET).elf
+	@echo "[LISTING] $@"
 	@$(OBJDUMP) -S $< > $@
+	$(SIZE) $(TARGET_PATH)/$(TARGET).elf
+
+#.PHONY:
 
 # Clean rule
 #.PHONY:
 clean:
 	@rm -rf $(BINDIR)
-	@rm -r $(TARGET).elf
-	@rm -r $(TARGET).bin
-	@rm -r $(TARGET).lst
+	@rm -r $(TARGET_PATH)/$(TARGET).elf
+#	@rm -r $(TARGET).bin
+#	@rm -r $(TARGET).lst

@@ -63,6 +63,7 @@ typedef struct DecState {
    spx_word16_t  last_ol_gain;  /**< Open-loop gain for previous frame */
 
    char  *stack;                /**< Pseudo-stack allocation for temporary memory */
+//   spx_word16_t excBuf[1];        /**< Excitation buffer */
    spx_word16_t excBuf[NB_DEC_BUFFER];        /**< Excitation buffer */
    spx_word16_t *exc;           /**< Start of excitation frame */
    spx_lsp_t old_qlsp[NB_ORDER];         /**< Quantized LSPs for previous frame */
