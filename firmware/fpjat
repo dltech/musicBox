@@ -1,0 +1,8 @@
+#!/bin/bash
+TARRGET="musicbox"
+
+make clean
+make all
+st-flash erase
+xfce4-terminal -e "st-util -p 5555 -n"
+xfce4-terminal -e "gdb-multiarch --init-command="usbcom/init_gdb" ../result/$TARRGET.elf"
