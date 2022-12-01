@@ -10,6 +10,7 @@ A speex codec based musical box, functions:\
 
 This project is not released yet, but never will be closed.\
 TODO:\
-*speex narrowband decoding only build (99%)\
+*speex narrowband decoding only build (ok)\
 *protocol for uploading music files through usb-com(0%)\
 *pc GUI for saving songs(0%)
+*tiny pcb 15x35mm (80%)
